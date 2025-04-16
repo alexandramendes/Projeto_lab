@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>ESP32 Medidor</title>
+  </head>
+  <body>
+    <h2>🔗 ESP32 Medidor via BLE</h2>
+    <button id="connectBtn">Conectar ao ESP32</button>
+    <button id="measureBtn" disabled>Solicitar Medição</button>
+    <p id="output">Valor: --</p>
+
+    <script>
+      let writeChar = null;
+      let notifyChar = null;
+
+      const serviceUUID = '12345678-1234-1234-1234-1234567890ab';
+      const writeUUID = '12345678-1234-1234-1234-1234567890ac';
+      const notifyUUID = '12345678-1234-1234-1234-1234567890ad';
+
+      document.getElementById("connectBtn").addEventListener("click", async () => {
+        try {
+          const device = await navigator.bluetooth.requestDevice({
+            filters: [{ name: 'ESP32_Medidor' }],
+            optionalServices: [serviceUUID]
+          });
+
+          const server = await device.gatt.connect();
+          const service = await server.getPrimaryService(serviceUUID);
+
+          writeChar = await service.getCharacteristic(writeUUID);
+          notifyChar = await service.getCharacteristic(notifyUUID);
+
+          await notifyChar.startNotifications();
+          notifyChar.addEventListener('characteristicvaluechanged', event => {
+            const value = new TextDecoder().decode(event.target.value);
+            document.getElementById("output").innerText = "Valor: " + value;
+          });
+
+          document.getElementById("measureBtn").disabled = false;
+          alert("Conectado com sucesso ao ESP32!");
+        } catch (error) {
+          alert("Erro ao conectar: " + error);
+        }
+      });
+
+      document.getElementById("measureBtn").addEventListener("click", async () => {
+        if (writeChar) {
+          await writeChar.writeValue(new TextEncoder().encode("start"));
+        }
+      });
+    </script>
+  </body>
+</html>
