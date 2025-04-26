@@ -13,6 +13,7 @@
       text-align: center;
       position: relative;
     }
+
     .top-icons {
       position: absolute;
       top: 20px;
@@ -20,6 +21,7 @@
       display: flex;
       gap: 8px;
     }
+
     .icon {
       width: 40px;
       height: 40px;
@@ -28,10 +30,12 @@
       align-items: center;
       justify-content: center;
     }
+
     .icon img {
       width: 100%;
       height: 100%;
     }
+
     h1 {
       color: #d32f2f;
       font-size: 2.5em;
@@ -39,23 +43,35 @@
       margin-bottom: 30px;
       font-weight: bold;
     }
+
     .measurement {
       margin-bottom: 20px;
       font-size: 1.4em;
       color: #d32f2f;
       font-weight: bold;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 10px;
     }
-    .value {
-      width: 250px;
-      margin: 10px auto;
+
+    .value-container {
+      display: flex;
+      align-items: center;
+    }
+
+    .value, .request-btn {
+      width: 150px;
       padding: 10px;
       background-color: #f0625d;
       border: none;
       border-radius: 30px;
-      font-size: 1.4em;
+      font-size: 1.2em;
       color: white;
       text-align: center;
+      cursor: pointer;
     }
+
     #voltarBtn {
       margin-top: 30px;
       padding: 12px 30px;
@@ -69,6 +85,7 @@
       box-shadow: 0px 5px 10px rgba(0, 0, 0, 0.2);
       transition: background-color 0.3s ease, transform 0.2s;
     }
+
     #voltarBtn:hover {
       background-color: #b71c1c;
       transform: scale(1.05);
@@ -85,19 +102,27 @@
   <h1>SENSOR DE DOXORRUBICINA</h1>
 
   <div class="measurement">
-    ABSORVÊNCIA:
-    <div id="absorvencia" class="value">--</div>
+    <span>ABSORVÊNCIA:</span>
+    <div class="value-container">
+      <button id="btnAbsorvencia" class="request-btn">VALOR</button>
+      <div id="absorvencia" class="value" style="display: none;">--</div>
+    </div>
   </div>
 
   <div class="measurement">
-    CONCENTRAÇÃO:
-    <div id="concentracao" class="value">--</div>
+    <span>CONCENTRAÇÃO:</span>
+    <div class="value-container">
+      <button id="btnConcentracao" class="request-btn">VALOR</button>
+      <div id="concentracao" class="value" style="display: none;">--</div>
+    </div>
   </div>
 
   <button id="voltarBtn" onclick="window.location.href='index.html'">VOLTAR</button>
 
   <script>
-    // Bluetooth Listener aqui
+    let characteristicGlobal;
+    let aguardando = ''; // Para saber o que estamos esperando: 'absorvencia' ou 'concentracao'
+
     navigator.bluetooth.getDevices().then(devices => {
       if (devices.length > 0) {
         devices[0].gatt.connect().then(server => {
@@ -105,15 +130,24 @@
         }).then(service => {
           return service.getCharacteristic('12345678-1234-1234-1234-1234567890ad');
         }).then(characteristic => {
+          characteristicGlobal = characteristic;
           characteristic.startNotifications().then(() => {
             characteristic.addEventListener('characteristicvaluechanged', event => {
               const value = new TextDecoder().decode(event.target.value);
-              const valores = value.split(','); // Espera que venham tipo: "0.8,5.2"
+              const valores = value.split(','); // Esperamos "0.8,5.2"
 
-              if (valores.length >= 2) {
+              if (aguardando === 'absorvencia' && valores.length >= 1) {
                 document.getElementById("absorvencia").innerText = valores[0];
+                document.getElementById("btnAbsorvencia").style.display = "none";
+                document.getElementById("absorvencia").style.display = "block";
+              } 
+              else if (aguardando === 'concentracao' && valores.length >= 2) {
                 document.getElementById("concentracao").innerText = valores[1];
+                document.getElementById("btnConcentracao").style.display = "none";
+                document.getElementById("concentracao").style.display = "block";
               }
+
+              aguardando = ''; // Zera depois de receber
             });
           });
         }).catch(error => {
@@ -121,6 +155,24 @@
         });
       }
     });
+
+    function requisitarValor(tipo) {
+      if (characteristicGlobal) {
+        aguardando = tipo;
+        console.log(`Pedido de valor para ${tipo} enviado.`);
+        // Se quiser enviar um comando para Arduino diferente dependendo do tipo:
+        // if (tipo === 'absorvencia') {
+        //   characteristicGlobal.writeValue(new TextEncoder().encode('PEDIR_ABSORVENCIA'));
+        // } else if (tipo === 'concentracao') {
+        //   characteristicGlobal.writeValue(new TextEncoder().encode('PEDIR_CONCENTRACAO'));
+        // }
+      } else {
+        console.error('Dispositivo Bluetooth não conectado.');
+      }
+    }
+
+    document.getElementById('btnAbsorvencia').addEventListener('click', () => requisitarValor('absorvencia'));
+    document.getElementById('btnConcentracao').addEventListener('click', () => requisitarValor('concentracao'));
   </script>
 
 </body>
