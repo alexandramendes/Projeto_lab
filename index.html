@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Sensor de Doxorrubicina</title>
+  <title>Sensor de Doxorrubicina - Conectar</title>
   <style>
     body {
       margin: 0;
@@ -18,15 +18,14 @@
       display: flex;
       justify-content: center;
       margin-top: 20px;
-      margin-bottom: 10px;
     }
     .logo-container img {
-      width: 120px; /* Ajusta o tamanho aqui se quiser maior ou menor */
+      width: 120px;
       height: auto;
     }
     h1 {
       color: #d32f2f;
-      margin-top: 10px; /* Pequena margem para não colar ao logo */
+      margin-top: 10px;
       font-size: 2.8em;
       font-weight: bold;
     }
@@ -54,33 +53,20 @@
       width: 80px;
       height: auto;
     }
-    #output {
-      margin-top: 30px;
-      font-size: 1.2em;
-      color: #333;
-    }
   </style>
 </head>
 <body>
 
-  <!-- Logo da Universidade do Minho -->
   <div class="logo-container">
     <img src="imagens/logo_um_eng.jpeg" alt="Logo UM">
   </div>
 
-  <!-- Imagem do frasco -->
   <img src="imagens/frasco.png" alt="Frasco de Doxorrubicina" class="frasco">
 
-  <!-- Título principal -->
   <h1>SENSOR DE DOXORRUBICINA</h1>
 
-  <!-- Botão de conexão -->
   <button id="connectBtn">CONECTAR DISPOSITIVO</button>
 
-  <!-- Local onde aparece o valor medido -->
-  <p id="output"></p>
-
-  <!-- Script Bluetooth -->
   <script>
     let writeChar = null;
     let notifyChar = null;
@@ -102,17 +88,13 @@
         writeChar = await service.getCharacteristic(writeUUID);
         notifyChar = await service.getCharacteristic(notifyUUID);
 
-        await notifyChar.startNotifications();
-        notifyChar.addEventListener('characteristicvaluechanged', event => {
-          const value = new TextDecoder().decode(event.target.value);
-          document.getElementById("output").innerText = "Valor: " + value;
-        });
-
-        alert("Conectado com sucesso ao ESP32!");
+        // Depois de conectar, vai para a página resultado.html
+        window.location.href = "resultado.html";
       } catch (error) {
         alert("Erro ao conectar: " + error);
       }
     });
   </script>
+
 </body>
 </html>
