@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Resultados - Doxorrubicina</title>
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      background-color: #fde0dc;
+      font-family: 'Arial', sans-serif;
+      text-align: center;
+      position: relative;
+    }
+    .top-icons {
+      position: absolute;
+      top: 20px;
+      right: 20px;
+      display: flex;
+      gap: 8px;
+    }
+    .icon {
+      width: 40px;
+      height: 40px;
+      background-color: transparent;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .icon img {
+      width: 100%;
+      height: 100%;
+    }
+    h1 {
+      color: #d32f2f;
+      font-size: 2.5em;
+      margin-top: 80px;
+      margin-bottom: 30px;
+      font-weight: bold;
+    }
+    .measurement {
+      margin-bottom: 20px;
+      font-size: 1.4em;
+      color: #d32f2f;
+      font-weight: bold;
+    }
+    .value {
+      width: 250px;
+      margin: 10px auto;
+      padding: 10px;
+      background-color: #f0625d;
+      border: none;
+      border-radius: 30px;
+      font-size: 1.4em;
+      color: white;
+      text-align: center;
+    }
+    #voltarBtn {
+      margin-top: 30px;
+      padding: 12px 30px;
+      background-color: #d32f2f;
+      border: none;
+      border-radius: 30px;
+      color: white;
+      font-size: 1.2em;
+      font-weight: bold;
+      cursor: pointer;
+      box-shadow: 0px 5px 10px rgba(0, 0, 0, 0.2);
+      transition: background-color 0.3s ease, transform 0.2s;
+    }
+    #voltarBtn:hover {
+      background-color: #b71c1c;
+      transform: scale(1.05);
+    }
+  </style>
+</head>
+<body>
+
+  <div class="top-icons">
+    <div class="icon"><img src="imagens/icone1.png" alt="Icone 1"></div>
+    <div class="icon"><img src="imagens/icone2.png" alt="Icone 2"></div>
+  </div>
+
+  <h1>SENSOR DE DOXORRUBICINA</h1>
+
+  <div class="measurement">
+    ABSORVÊNCIA:
+    <div id="absorvencia" class="value">--</div>
+  </div>
+
+  <div class="measurement">
+    CONCENTRAÇÃO:
+    <div id="concentracao" class="value">--</div>
+  </div>
+
+  <button id="voltarBtn" onclick="window.location.href='index.html'">VOLTAR</button>
+
+  <script>
+    // Bluetooth Listener aqui
+    navigator.bluetooth.getDevices().then(devices => {
+      if (devices.length > 0) {
+        devices[0].gatt.connect().then(server => {
+          return server.getPrimaryService('12345678-1234-1234-1234-1234567890ab');
+        }).then(service => {
+          return service.getCharacteristic('12345678-1234-1234-1234-1234567890ad');
+        }).then(characteristic => {
+          characteristic.startNotifications().then(() => {
+            characteristic.addEventListener('characteristicvaluechanged', event => {
+              const value = new TextDecoder().decode(event.target.value);
+              const valores = value.split(','); // Espera que venham tipo: "0.8,5.2"
+
+              if (valores.length >= 2) {
+                document.getElementById("absorvencia").innerText = valores[0];
+                document.getElementById("concentracao").innerText = valores[1];
+              }
+            });
+          });
+        }).catch(error => {
+          console.error(error);
+        });
+      }
+    });
+  </script>
+
+</body>
+</html>
