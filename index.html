@@ -14,9 +14,19 @@
       position: relative;
       overflow-x: hidden;
     }
+    .logo-container {
+      display: flex;
+      justify-content: center;
+      margin-top: 20px;
+      margin-bottom: 10px;
+    }
+    .logo-container img {
+      width: 120px; /* Ajusta o tamanho aqui se quiser maior ou menor */
+      height: auto;
+    }
     h1 {
       color: #d32f2f;
-      margin-top: 60px;
+      margin-top: 10px; /* Pequena margem para não colar ao logo */
       font-size: 2.8em;
       font-weight: bold;
     }
@@ -44,28 +54,6 @@
       width: 80px;
       height: auto;
     }
-    .icones {
-      position: absolute;
-      top: 20px;
-      right: 20px;
-      display: flex;
-      gap: 8px;
-    }
-    .icone {
-      width: 50px;
-      height: 50px;
-      background-color: #d32f2f;
-      border-radius: 8px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      overflow: hidden;
-    }
-    .icone img {
-      width: 90%;
-      height: auto;
-      object-fit: contain;
-    }
     #output {
       margin-top: 30px;
       font-size: 1.2em;
@@ -75,20 +63,24 @@
 </head>
 <body>
 
-  <div class="icones">
-    <div class="icone">
-      <img src="imagens/logos_um_eng.jpeg" alt="Logo UM">
-    </div>
+  <!-- Logo da Universidade do Minho -->
+  <div class="logo-container">
+    <img src="imagens/logo_um_eng.jpeg" alt="Logo UM">
   </div>
 
+  <!-- Imagem do frasco -->
   <img src="imagens/frasco.png" alt="Frasco de Doxorrubicina" class="frasco">
 
+  <!-- Título principal -->
   <h1>SENSOR DE DOXORRUBICINA</h1>
 
+  <!-- Botão de conexão -->
   <button id="connectBtn">CONECTAR DISPOSITIVO</button>
 
+  <!-- Local onde aparece o valor medido -->
   <p id="output"></p>
 
+  <!-- Script Bluetooth -->
   <script>
     let writeChar = null;
     let notifyChar = null;
