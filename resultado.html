@@ -18,6 +18,7 @@
       position: absolute;
       top: 20px;
       right: 20px;
+      padding-right: 20px;
     }
 
     .logo-container img {
@@ -47,7 +48,6 @@
     .value-container {
       display: flex;
       align-items: center;
-      gap: 10px;
     }
 
     .value, .request-btn {
@@ -60,6 +60,25 @@
       color: white;
       text-align: center;
       cursor: pointer;
+    }
+
+    #btnCalibrar {
+      margin-bottom: 30px;
+      padding: 12px 30px;
+      background-color: #f0625d;
+      border: none;
+      border-radius: 30px;
+      color: white;
+      font-size: 1.2em;
+      font-weight: bold;
+      cursor: pointer;
+      box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.2);
+      transition: background-color 0.3s ease, transform 0.2s;
+    }
+
+    #btnCalibrar:hover {
+      background-color: #d84340;
+      transform: scale(1.03);
     }
 
     #voltarBtn {
@@ -84,19 +103,14 @@
 </head>
 <body>
 
-  <!-- LOGO -->
   <div class="logo-container">
     <img src="imagens/logos_um_eng.jpeg" alt="Logo UM">
   </div>
 
   <h1>SENSOR DE DOXORRUBICINA</h1>
 
-  <!-- CALIBRAR -->
-  <div style="margin-bottom: 30px;">
-    <button id="btnCalibrar" class="request-btn" style="width: auto; padding: 10px 20px;">CALIBRAR REFERÊNCIA</button>
-  </div>
+  <button id="btnCalibrar">Calibrar Referência (V₀)</button>
 
-  <!-- ABSORVÊNCIA -->
   <div class="measurement">
     <span>ABSORVÊNCIA:</span>
     <div class="value-container">
@@ -105,7 +119,6 @@
     </div>
   </div>
 
-  <!-- CONCENTRAÇÃO -->
   <div class="measurement">
     <span>CONCENTRAÇÃO:</span>
     <div class="value-container">
@@ -114,79 +127,75 @@
     </div>
   </div>
 
-  <!-- BOTÃO VOLTAR -->
   <button id="voltarBtn" onclick="window.location.href='index.html'">VOLTAR</button>
 
   <script>
-  let writeCharacteristic = null;
-  let notifyCharacteristic = null;
-  let aguardando = '';
+    let writeCharacteristic = null;
+    let notifyCharacteristic = null;
+    let aguardando = '';
 
-  navigator.bluetooth.getDevices().then(devices => {
-    if (devices.length > 0) {
-      devices[0].gatt.connect().then(server => {
-        return server.getPrimaryService('12345678-1234-1234-1234-1234567890ab');
-      }).then(async service => {
-        // Lê as duas características
-        writeCharacteristic = await service.getCharacteristic('12345678-1234-1234-1234-1234567890ac');
-        notifyCharacteristic = await service.getCharacteristic('12345678-1234-1234-1234-1234567890ad');
+    navigator.bluetooth.getDevices().then(devices => {
+      if (devices.length > 0) {
+        devices[0].gatt.connect().then(server => {
+          return server.getPrimaryService('12345678-1234-1234-1234-1234567890ab');
+        }).then(async service => {
+          // Lê as duas características
+          writeCharacteristic = await service.getCharacteristic('12345678-1234-1234-1234-1234567890ac');
+          notifyCharacteristic = await service.getCharacteristic('12345678-1234-1234-1234-1234567890ad');
 
-        // Ativa notificações
-        await notifyCharacteristic.startNotifications();
-        notifyCharacteristic.addEventListener('characteristicvaluechanged', event => {
-          const value = new TextDecoder().decode(event.target.value);
-          console.log("Valor recebido:", value);
+          await notifyCharacteristic.startNotifications();
+          notifyCharacteristic.addEventListener('characteristicvaluechanged', event => {
+            const value = new TextDecoder().decode(event.target.value);
+            console.log("Valor recebido:", value);
 
-          if (aguardando === 'absorvencia') {
-            const match = value.match(/A=([\d.]+)/);
-            if (match) {
-              document.getElementById("absorvencia").innerText = match[1];
-              document.getElementById("btnAbsorvencia").style.display = "none";
-              document.getElementById("absorvencia").style.display = "block";
+            if (aguardando === 'absorvencia') {
+              const match = value.match(/A=([\d.]+)/);
+              if (match) {
+                document.getElementById("absorvencia").innerText = match[1];
+                document.getElementById("btnAbsorvencia").style.display = "none";
+                document.getElementById("absorvencia").style.display = "block";
+              }
             }
-          }
 
-          // Se quiseres mais tarde: trata 'C=...' aqui também
-
-          aguardando = '';
+            aguardando = '';
+          });
+        }).catch(error => {
+          console.error("Erro ao conectar Bluetooth:", error);
         });
-      }).catch(error => {
-        console.error("Erro ao conectar Bluetooth:", error);
-      });
-    } else {
-      console.warn("Nenhum dispositivo Bluetooth emparelhado encontrado.");
-    }
-  });
+      } else {
+        console.warn("Nenhum dispositivo Bluetooth emparelhado encontrado.");
+      }
+    });
 
-  function requisitarValor(tipo) {
-    if (writeCharacteristic) {
-      aguardando = tipo;
-      writeCharacteristic.writeValue(new TextEncoder().encode("start"));
-      console.log(`Comando 'start' enviado para ${tipo}`);
-    } else {
-      alert("Dispositivo não conectado.");
-    }
-  }
-
-  document.getElementById('btnAbsorvencia').addEventListener('click', () => requisitarValor('absorvencia'));
-  document.getElementById('btnConcentracao').addEventListener('click', () => requisitarValor('concentracao'));
-
-  document.getElementById('btnCalibrar').addEventListener('click', () => {
-    const novoV0 = prompt("Insira o novo valor de referência V₀ (ex: 2.547):");
-    const v0Float = parseFloat(novoV0);
-    if (!isNaN(v0Float) && v0Float > 0 && v0Float <= 3.3) {
+    function requisitarValor(tipo) {
       if (writeCharacteristic) {
-        const comando = `v0=${v0Float.toFixed(3)}`;
-        writeCharacteristic.writeValue(new TextEncoder().encode(comando));
-        alert(`Valor de referência atualizado para ${v0Float.toFixed(3)} V`);
+        aguardando = tipo;
+        writeCharacteristic.writeValue(new TextEncoder().encode("start"));
+        console.log(`Comando 'start' enviado para ${tipo}`);
       } else {
         alert("Dispositivo não conectado.");
       }
-    } else {
-      alert("Valor inválido. Deve estar entre 0 e 3.3 V.");
     }
-  });
-</script>
+
+    document.getElementById('btnAbsorvencia').addEventListener('click', () => requisitarValor('absorvencia'));
+    document.getElementById('btnConcentracao').addEventListener('click', () => requisitarValor('concentracao'));
+
+    document.getElementById('btnCalibrar').addEventListener('click', () => {
+      const novoV0 = prompt("Insira o novo valor de referência V₀ (ex: 2.547):");
+      const v0Float = parseFloat(novoV0);
+      if (!isNaN(v0Float) && v0Float > 0 && v0Float <= 3.3) {
+        if (writeCharacteristic) {
+          const comando = `v0=${v0Float.toFixed(3)}`;
+          writeCharacteristic.writeValue(new TextEncoder().encode(comando));
+          alert(`Valor de referência atualizado para ${v0Float.toFixed(3)} V`);
+        } else {
+          alert("Dispositivo não conectado.");
+        }
+      } else {
+        alert("Valor inválido. Deve estar entre 0 e 3.3 V.");
+      }
+    });
+  </script>
 
 </body>
 </html>
