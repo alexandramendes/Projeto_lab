@@ -3,56 +3,82 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Sensor de Doxorrubicina - Conectar</title>
+  <title>Resultados - Doxorrubicina</title>
   <style>
     body {
       margin: 0;
       padding: 0;
-      background-color: #fbe9e7;
+      background-color: #fde0dc;
       font-family: 'Arial', sans-serif;
       text-align: center;
       position: relative;
-      overflow-x: hidden;
     }
+
     .logo-container {
       display: flex;
       justify-content: flex-end;
       margin-top: 20px;
       padding-right: 40px;
     }
+
     .logo-container img {
       width: 120px;
       height: auto;
     }
+
     h1 {
       color: #d32f2f;
-      margin-top: 10px;
-      font-size: 2.8em;
+      font-size: 2.5em;
+      margin-top: 30px;
+      margin-bottom: 30px;
       font-weight: bold;
     }
-    #connectBtn {
-      margin-top: 40px;
-      padding: 18px 40px;
+
+    .measurement {
+      margin-bottom: 20px;
+      font-size: 1.4em;
+      color: #d32f2f;
+      font-weight: bold;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .value-container {
+      display: flex;
+      align-items: center;
+    }
+
+    .value, .request-btn {
+      width: 150px;
+      padding: 10px;
+      background-color: #f0625d;
+      border: none;
+      border-radius: 30px;
+      font-size: 1.2em;
+      color: white;
+      text-align: center;
+      cursor: pointer;
+    }
+
+    #voltarBtn {
+      margin-top: 30px;
+      padding: 12px 30px;
       background-color: #d32f2f;
       border: none;
-      border-radius: 50px;
+      border-radius: 30px;
       color: white;
-      font-size: 1.4em;
+      font-size: 1.2em;
       font-weight: bold;
       cursor: pointer;
-      box-shadow: 0px 5px 15px rgba(0, 0, 0, 0.2);
+      box-shadow: 0px 5px 10px rgba(0, 0, 0, 0.2);
       transition: background-color 0.3s ease, transform 0.2s;
     }
-    #connectBtn:hover {
+
+    #voltarBtn:hover {
       background-color: #b71c1c;
       transform: scale(1.05);
-    }
-    .frasco {
-      position: absolute;
-      left: 40px;
-      top: 180px;
-      width: 80px;
-      height: auto;
     }
   </style>
 </head>
@@ -62,39 +88,75 @@
     <img src="imagens/logos_um_eng.jpeg" alt="Logo UM">
   </div>
 
-  <img src="imagens/frasco.png" alt="Frasco de Doxorrubicina" class="frasco">
-
   <h1>SENSOR DE DOXORRUBICINA</h1>
 
-  <button id="connectBtn">CONECTAR DISPOSITIVO</button>
+  <div class="measurement">
+    <span>ABSORVÊNCIA:</span>
+    <div class="value-container">
+      <button id="btnAbsorvencia" class="request-btn">VALOR</button>
+      <div id="absorvencia" class="value" style="display: none;">--</div>
+    </div>
+  </div>
+
+  <div class="measurement">
+    <span>CONCENTRAÇÃO:</span>
+    <div class="value-container">
+      <button id="btnConcentracao" class="request-btn">VALOR</button>
+      <div id="concentracao" class="value" style="display: none;">--</div>
+    </div>
+  </div>
+
+  <button id="voltarBtn" onclick="window.location.href='index.html'">VOLTAR</button>
 
   <script>
-    let writeChar = null;
-    let notifyChar = null;
+    let characteristicGlobal;
+    let aguardando = ''; // Para saber o que estamos esperando: 'absorvencia' ou 'concentracao'
 
-    const serviceUUID = '12345678-1234-1234-1234-1234567890ab';
-    const writeUUID = '12345678-1234-1234-1234-1234567890ac';
-    const notifyUUID = '12345678-1234-1234-1234-1234567890ad';
+    navigator.bluetooth.getDevices().then(devices => {
+      if (devices.length > 0) {
+        devices[0].gatt.connect().then(server => {
+          return server.getPrimaryService('12345678-1234-1234-1234-1234567890ab');
+        }).then(service => {
+          return service.getCharacteristic('12345678-1234-1234-1234-1234567890ad');
+        }).then(characteristic => {
+          characteristicGlobal = characteristic;
+          characteristic.startNotifications().then(() => {
+            characteristic.addEventListener('characteristicvaluechanged', event => {
+              const value = new TextDecoder().decode(event.target.value);
+              const valores = value.split(','); // Esperamos "0.8,5.2"
 
-    document.getElementById("connectBtn").addEventListener("click", async () => {
-      try {
-        const device = await navigator.bluetooth.requestDevice({
-          filters: [{ name: 'ESP32_Medidor' }],
-          optionalServices: [serviceUUID]
+              if (aguardando === 'absorvencia' && valores.length >= 1) {
+                document.getElementById("absorvencia").innerText = valores[0];
+                document.getElementById("btnAbsorvencia").style.display = "none";
+                document.getElementById("absorvencia").style.display = "block";
+              } 
+              else if (aguardando === 'concentracao' && valores.length >= 2) {
+                document.getElementById("concentracao").innerText = valores[1];
+                document.getElementById("btnConcentracao").style.display = "none";
+                document.getElementById("concentracao").style.display = "block";
+              }
+
+              aguardando = ''; // Zera depois de receber
+            });
+          });
+        }).catch(error => {
+          console.error(error);
         });
-
-        const server = await device.gatt.connect();
-        const service = await server.getPrimaryService(serviceUUID);
-
-        writeChar = await service.getCharacteristic(writeUUID);
-        notifyChar = await service.getCharacteristic(notifyUUID);
-
-        // Depois de conectar, vai para a página resultado.html
-        window.location.href = "resultado.html";
-      } catch (error) {
-        alert("Erro ao conectar: " + error);
       }
     });
+
+    function requisitarValor(tipo) {
+      if (characteristicGlobal) {
+        aguardando = tipo;
+        console.log(`Pedido de valor para ${tipo} enviado.`);
+        // Pode adicionar comandos específicos aqui se necessário
+      } else {
+        console.error('Dispositivo Bluetooth não conectado.');
+      }
+    }
+
+    document.getElementById('btnAbsorvencia').addEventListener('click', () => requisitarValor('absorvencia'));
+    document.getElementById('btnConcentracao').addEventListener('click', () => requisitarValor('concentracao'));
   </script>
 
 </body>
