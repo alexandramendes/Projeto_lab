@@ -118,73 +118,75 @@
   <button id="voltarBtn" onclick="window.location.href='index.html'">VOLTAR</button>
 
   <script>
-    let characteristicGlobal;
-    let aguardando = '';
+  let writeCharacteristic = null;
+  let notifyCharacteristic = null;
+  let aguardando = '';
 
-    navigator.bluetooth.getDevices().then(devices => {
-      if (devices.length > 0) {
-        devices[0].gatt.connect().then(server => {
-          return server.getPrimaryService('12345678-1234-1234-1234-1234567890ab');
-        }).then(service => {
-          return service.getCharacteristic('12345678-1234-1234-1234-1234567890ad');
-        }).then(characteristic => {
-          characteristicGlobal = characteristic;
-          characteristic.startNotifications().then(() => {
-            characteristic.addEventListener('characteristicvaluechanged', event => {
-              const value = new TextDecoder().decode(event.target.value);
-              console.log("Valor recebido:", value);
-              const valores = value.split(',');
+  navigator.bluetooth.getDevices().then(devices => {
+    if (devices.length > 0) {
+      devices[0].gatt.connect().then(server => {
+        return server.getPrimaryService('12345678-1234-1234-1234-1234567890ab');
+      }).then(async service => {
+        // Lê as duas características
+        writeCharacteristic = await service.getCharacteristic('12345678-1234-1234-1234-1234567890ac');
+        notifyCharacteristic = await service.getCharacteristic('12345678-1234-1234-1234-1234567890ad');
 
-              if (aguardando === 'absorvencia') {
-                const match = value.match(/A=([\d.]+)/);
-                if (match) {
-                  document.getElementById("absorvencia").innerText = match[1];
-                  document.getElementById("btnAbsorvencia").style.display = "none";
-                  document.getElementById("absorvencia").style.display = "block";
-                }
-              }
+        // Ativa notificações
+        await notifyCharacteristic.startNotifications();
+        notifyCharacteristic.addEventListener('characteristicvaluechanged', event => {
+          const value = new TextDecoder().decode(event.target.value);
+          console.log("Valor recebido:", value);
 
-              // Futuro: tratamento de concentração aqui
+          if (aguardando === 'absorvencia') {
+            const match = value.match(/A=([\d.]+)/);
+            if (match) {
+              document.getElementById("absorvencia").innerText = match[1];
+              document.getElementById("btnAbsorvencia").style.display = "none";
+              document.getElementById("absorvencia").style.display = "block";
+            }
+          }
 
-              aguardando = '';
-            });
-          });
-        }).catch(error => {
-          console.error(error);
+          // Se quiseres mais tarde: trata 'C=...' aqui também
+
+          aguardando = '';
         });
-      }
-    });
-
-    function requisitarValor(tipo) {
-      if (characteristicGlobal) {
-        aguardando = tipo;
-        const comando = 'start';
-        characteristicGlobal.writeValue(new TextEncoder().encode(comando));
-        console.log(`Comando '${comando}' enviado para ${tipo}.`);
-      } else {
-        console.error('Dispositivo Bluetooth não conectado.');
-      }
+      }).catch(error => {
+        console.error("Erro ao conectar Bluetooth:", error);
+      });
+    } else {
+      console.warn("Nenhum dispositivo Bluetooth emparelhado encontrado.");
     }
+  });
 
-    document.getElementById('btnAbsorvencia').addEventListener('click', () => requisitarValor('absorvencia'));
-    document.getElementById('btnConcentracao').addEventListener('click', () => requisitarValor('concentracao'));
+  function requisitarValor(tipo) {
+    if (writeCharacteristic) {
+      aguardando = tipo;
+      writeCharacteristic.writeValue(new TextEncoder().encode("start"));
+      console.log(`Comando 'start' enviado para ${tipo}`);
+    } else {
+      alert("Dispositivo não conectado.");
+    }
+  }
 
-    document.getElementById('btnCalibrar').addEventListener('click', () => {
-      const novoV0 = prompt("Insira o novo valor de referência V₀ (ex: 2.547):");
-      const v0Float = parseFloat(novoV0);
-      if (!isNaN(v0Float) && v0Float > 0 && v0Float <= 3.3) {
-        if (characteristicGlobal) {
-          const comando = `v0=${v0Float.toFixed(3)}`;
-          characteristicGlobal.writeValue(new TextEncoder().encode(comando));
-          alert(`Valor de referência atualizado para ${v0Float.toFixed(3)} V`);
-        } else {
-          alert("Dispositivo Bluetooth não conectado.");
-        }
+  document.getElementById('btnAbsorvencia').addEventListener('click', () => requisitarValor('absorvencia'));
+  document.getElementById('btnConcentracao').addEventListener('click', () => requisitarValor('concentracao'));
+
+  document.getElementById('btnCalibrar').addEventListener('click', () => {
+    const novoV0 = prompt("Insira o novo valor de referência V₀ (ex: 2.547):");
+    const v0Float = parseFloat(novoV0);
+    if (!isNaN(v0Float) && v0Float > 0 && v0Float <= 3.3) {
+      if (writeCharacteristic) {
+        const comando = `v0=${v0Float.toFixed(3)}`;
+        writeCharacteristic.writeValue(new TextEncoder().encode(comando));
+        alert(`Valor de referência atualizado para ${v0Float.toFixed(3)} V`);
       } else {
-        alert("Valor inválido. Deve ser um número entre 0 e 3.3");
+        alert("Dispositivo não conectado.");
       }
-    });
-  </script>
+    } else {
+      alert("Valor inválido. Deve estar entre 0 e 3.3 V.");
+    }
+  });
+</script>
 
 </body>
 </html>
