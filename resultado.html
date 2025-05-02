@@ -91,6 +91,10 @@
   <h1>SENSOR DE DOXORRUBICINA</h1>
 
   <div class="measurement">
+    <button id="btnIniciar" class="request-btn">INICIAR</button>
+  </div>
+
+  <div class="measurement">
     <span>ABSORVÊNCIA:</span>
     <div class="value-container">
       <button id="btnAbsorvencia" class="request-btn">VALOR</button>
@@ -113,82 +117,74 @@
   <button id="voltarBtn" onclick="window.location.href='index.html'">VOLTAR</button>
 
   <script>
-  let characteristicGlobalWrite;
-  let characteristicGlobalNotify;
-
-  window.addEventListener('load', conectarDispositivo);
-
-  async function conectarDispositivo() {
-    try {
-      const device = await navigator.bluetooth.requestDevice({
-        filters: [{ name: 'ESP32_Medidor' }],
-        optionalServices: ['12345678-1234-1234-1234-1234567890ab']
-      });
-
-      const server = await device.gatt.connect();
-      const service = await server.getPrimaryService('12345678-1234-1234-1234-1234567890ab');
-
-      characteristicGlobalWrite = await service.getCharacteristic('12345678-1234-1234-1234-1234567890ac');
-      characteristicGlobalNotify = await service.getCharacteristic('12345678-1234-1234-1234-1234567890ad');
-
-      await characteristicGlobalNotify.startNotifications();
-      characteristicGlobalNotify.addEventListener('characteristicvaluechanged', onDataReceived);
-
-      console.log("Dispositivo conectado.");
-    } catch (error) {
-      console.error("Erro ao conectar:", error);
+    let characteristicGlobalWrite;
+    let characteristicGlobalNotify;
+    let ultimaAbsorvencia = null;
+  
+    async function conectarDispositivo() {
+      try {
+        const device = await navigator.bluetooth.requestDevice({
+          filters: [{ name: 'ESP32_Medidor' }],
+          optionalServices: ['12345678-1234-1234-1234-1234567890ab']
+        });
+  
+        const server = await device.gatt.connect();
+        const service = await server.getPrimaryService('12345678-1234-1234-1234-1234567890ab');
+  
+        characteristicGlobalWrite = await service.getCharacteristic('12345678-1234-1234-1234-1234567890ac');
+        characteristicGlobalNotify = await service.getCharacteristic('12345678-1234-1234-1234-1234567890ad');
+  
+        await characteristicGlobalNotify.startNotifications();
+        characteristicGlobalNotify.addEventListener('characteristicvaluechanged', event => {
+          const value = new TextDecoder().decode(event.target.value);
+          console.log("Recebido:", value);
+  
+          if (value.startsWith("A=")) {
+            const a = value.slice(2);
+            ultimaAbsorvencia = parseFloat(a);
+            document.getElementById("absorvencia").innerText = a;
+            document.getElementById("btnAbsorvencia").style.display = "none";
+            document.getElementById("absorvencia").style.display = "block";
+          }
+  
+          if (value.startsWith("C=")) {
+            const c = value.slice(2);
+            document.getElementById("concentracao").innerText = c;
+            document.getElementById("btnConcentracao").style.display = "none";
+            document.getElementById("concentracao").style.display = "block";
+          }
+        });
+  
+        console.log("Dispositivo conectado.");
+      } catch (error) {
+        console.error("Erro ao conectar:", error);
+      }
     }
-  }
-
-  function onDataReceived(event) {
-    const value = new TextDecoder().decode(event.target.value);
-    console.log("Recebido:", value);
-
-    if (value.startsWith("A=")) {
-      const absorv = value.substring(2);
-      document.getElementById("absorvencia").innerText = absorv;
-      document.getElementById("btnAbsorvencia").style.display = "none";
-      document.getElementById("absorvencia").style.display = "block";
+  
+    async function enviarComando(cmd) {
+      if (characteristicGlobalWrite) {
+        await characteristicGlobalWrite.writeValue(new TextEncoder().encode(cmd));
+      } else {
+        alert("Dispositivo não conectado.");
+      }
     }
-
-    if (value.startsWith("C=")) {
-      const conc = value.substring(2);
-      document.getElementById("concentracao").innerText = conc;
-      document.getElementById("btnConcentracao").style.display = "none";
-      document.getElementById("concentracao").style.display = "block";
-    }
-  }
-
-  async function enviarComando(comando) {
-    if (characteristicGlobalWrite) {
-      await characteristicGlobalWrite.writeValue(new TextEncoder().encode(comando));
-    } else {
-      console.error("Dispositivo não conectado.");
-    }
-  }
-
-  function obterAbsorvencia() {
-    enviarComando("valorA");
-  }
-
-  function obterConcentracao() {
-    enviarComando("valorC");
-  }
-
-  async function calibrarReferencia() {
-    const novoV0 = prompt("Insira o novo valor de V0 (ex: 2.547):");
-    if (novoV0 && !isNaN(parseFloat(novoV0))) {
-      await enviarComando(`v0=${novoV0}`);
-      alert(`Valor de referência V0 atualizado para ${novoV0}`);
-    } else {
-      alert("Valor inválido.");
-    }
-  }
-
-  document.getElementById('btnAbsorvencia').addEventListener('click', obterAbsorvencia);
-  document.getElementById('btnConcentracao').addEventListener('click', obterConcentracao);
-  document.getElementById('btnCalibrar').addEventListener('click', calibrarReferencia);
-</script>
+  
+    // Eventos de botões
+    document.getElementById("btnIniciar").addEventListener("click", () => enviarComando("iniciar"));
+    document.getElementById("btnAbsorvencia").addEventListener("click", () => enviarComando("valorA"));
+    document.getElementById("btnConcentracao").addEventListener("click", () => enviarComando("valorC"));
+    document.getElementById("btnCalibrar").addEventListener("click", async () => {
+      const novoV0 = prompt("Insira o novo valor de V0 (ex: 2.547):");
+      if (novoV0 && !isNaN(parseFloat(novoV0))) {
+        await enviarComando(`v0=${novoV0}`);
+        alert(`Valor de referência V0 atualizado para ${novoV0}`);
+      } else {
+        alert("Valor inválido.");
+      }
+    });
+  
+    window.addEventListener("load", conectarDispositivo);
+  </script>
 
 
 </body>
