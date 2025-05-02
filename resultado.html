@@ -94,6 +94,10 @@
     <button id="btnIniciar" class="request-btn">INICIAR</button>
   </div>
 
+  <div id="progressContainer" style="display: none; margin-top: 10px; width: 100%; max-width: 300px;">
+    <div id="progressBar" style="height: 20px; width: 0%; background-color: #4CAF50; transition: width 1s;"></div>
+  </div>
+
   <div class="measurement">
     <span>ABSORVÊNCIA:</span>
     <div class="value-container">
@@ -170,7 +174,27 @@
     }
   
     // Eventos de botões
-    document.getElementById("btnIniciar").addEventListener("click", () => enviarComando("iniciar"));
+    document.getElementById("btnIniciar").addEventListener("click", async () => {
+      // Mostra barra de progresso e reinicia
+      const bar = document.getElementById("progressBar");
+      const container = document.getElementById("progressContainer");
+      container.style.display = "block";
+      bar.style.width = "0%";
+    
+      // Envia comando "iniciar" para o ESP32
+      await enviarComando("iniciar");
+    
+      // Anima a barra de progresso por 6 segundos
+      for (let i = 1; i <= 6; i++) {
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        bar.style.width = `${(i / 6) * 100}%`;
+      }
+    
+      // Esconde barra após completar
+      await new Promise(resolve => setTimeout(resolve, 500));
+      container.style.display = "none";
+    });
+
     document.getElementById("btnAbsorvencia").addEventListener("click", () => enviarComando("valorA"));
     document.getElementById("btnConcentracao").addEventListener("click", () => enviarComando("valorC"));
     document.getElementById("btnCalibrar").addEventListener("click", async () => {
