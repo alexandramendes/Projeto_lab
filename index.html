@@ -30,7 +30,7 @@
       font-size: 2.8em;
       font-weight: bold;
     }
-    #connectBtn, #startBtn {
+    #connectBtn {
       margin-top: 40px;
       padding: 18px 40px;
       border: none;
@@ -40,21 +40,11 @@
       font-weight: bold;
       cursor: pointer;
       box-shadow: 0px 5px 15px rgba(0, 0, 0, 0.2);
-      transition: background-color 0.3s ease, transform 0.2s;
-    }
-    #connectBtn {
       background-color: #d32f2f;
+      transition: background-color 0.3s ease, transform 0.2s;
     }
     #connectBtn:hover {
       background-color: #b71c1c;
-      transform: scale(1.05);
-    }
-    #startBtn {
-      background-color: #388e3c;
-      display: none;
-    }
-    #startBtn:hover {
-      background-color: #2e7d32;
       transform: scale(1.05);
     }
     .frasco {
@@ -77,7 +67,6 @@
   <h1>SENSOR DE DOXORRUBICINA</h1>
 
   <button id="connectBtn">CONECTAR DISPOSITIVO</button>
-  <button id="startBtn">INICIAR MEDIÇÃO</button>
 
   <script>
     let writeChar = null;
@@ -100,26 +89,12 @@
         writeChar = await service.getCharacteristic(writeUUID);
         notifyChar = await service.getCharacteristic(notifyUUID);
 
-        // Mostra botão de iniciar
-        document.getElementById("startBtn").style.display = "inline-block";
-
         alert("Dispositivo conectado com sucesso!");
+
+        // Redireciona automaticamente para a página de resultado
+        window.location.href = "resultado.html";
       } catch (error) {
         alert("Erro ao conectar: " + error);
-      }
-    });
-
-    document.getElementById("startBtn").addEventListener("click", async () => {
-      if (writeChar) {
-        const encoder = new TextEncoder();
-        await writeChar.writeValue(encoder.encode("iniciar"));
-
-        alert("Medição iniciada! Aguarde...");
-
-        // Espera 6 segundos (1s de limpeza + 5s de medição)
-        setTimeout(() => {
-          window.location.href = "resultado.html";
-        }, 6000);
       }
     });
   </script>
