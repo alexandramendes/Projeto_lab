@@ -113,7 +113,13 @@
       if (writeChar) {
         const encoder = new TextEncoder();
         await writeChar.writeValue(encoder.encode("iniciar"));
-        alert("Medição iniciada! Aguarde alguns segundos.");
+
+        alert("Medição iniciada! Aguarde...");
+
+        // Espera 6 segundos (1s de limpeza + 5s de medição)
+        setTimeout(() => {
+          window.location.href = "resultado.html";
+        }, 6000);
       }
     });
   </script>
