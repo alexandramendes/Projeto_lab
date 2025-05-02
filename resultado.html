@@ -15,22 +15,22 @@
     }
 
     .logo-container {
-      position: absolute;
-      top: 20px;
-      right: 20px;
-      padding-right: 20px;
+      display: flex;
+      justify-content: flex-end;
+      margin-top: 20px;
+      padding-right: 40px;
     }
 
     .logo-container img {
-      width: 100px;
+      width: 120px;
       height: auto;
     }
 
     h1 {
       color: #d32f2f;
       font-size: 2.5em;
-      margin-top: 80px;
-      margin-bottom: 30px;
+      margin-top: 30px;
+      margin-bottom: 20px;
       font-weight: bold;
     }
 
@@ -63,7 +63,7 @@
     }
 
     #btnCalibrar {
-      margin-bottom: 30px;
+      margin: 20px auto;
       padding: 12px 30px;
       background-color: #f0625d;
       border: none;
@@ -130,21 +130,21 @@
   <button id="voltarBtn" onclick="window.location.href='index.html'">VOLTAR</button>
 
   <script>
-    let writeCharacteristic = null;
-    let notifyCharacteristic = null;
+    let writeChar = null;
+    let notifyChar = null;
     let aguardando = '';
 
+    // Reutiliza conexão Bluetooth já emparelhada
     navigator.bluetooth.getDevices().then(devices => {
       if (devices.length > 0) {
         devices[0].gatt.connect().then(server => {
           return server.getPrimaryService('12345678-1234-1234-1234-1234567890ab');
         }).then(async service => {
-          // Lê as duas características
-          writeCharacteristic = await service.getCharacteristic('12345678-1234-1234-1234-1234567890ac');
-          notifyCharacteristic = await service.getCharacteristic('12345678-1234-1234-1234-1234567890ad');
+          writeChar = await service.getCharacteristic('12345678-1234-1234-1234-1234567890ac');
+          notifyChar = await service.getCharacteristic('12345678-1234-1234-1234-1234567890ad');
 
-          await notifyCharacteristic.startNotifications();
-          notifyCharacteristic.addEventListener('characteristicvaluechanged', event => {
+          await notifyChar.startNotifications();
+          notifyChar.addEventListener('characteristicvaluechanged', event => {
             const value = new TextDecoder().decode(event.target.value);
             console.log("Valor recebido:", value);
 
@@ -157,42 +157,47 @@
               }
             }
 
+            // Exemplo futuro para concentração, se o ESP32 enviar "C=..."
+            if (aguardando === 'concentracao') {
+              const match = value.match(/C=([\d.]+)/);
+              if (match) {
+                document.getElementById("concentracao").innerText = match[1];
+                document.getElementById("btnConcentracao").style.display = "none";
+                document.getElementById("concentracao").style.display = "block";
+              }
+            }
+
             aguardando = '';
           });
         }).catch(error => {
-          console.error("Erro ao conectar Bluetooth:", error);
+          console.error("Erro de conexão:", error);
         });
-      } else {
-        console.warn("Nenhum dispositivo Bluetooth emparelhado encontrado.");
       }
     });
 
-    function requisitarValor(tipo) {
-      if (writeCharacteristic) {
-        aguardando = tipo;
-        writeCharacteristic.writeValue(new TextEncoder().encode("start"));
-        console.log(`Comando 'start' enviado para ${tipo}`);
-      } else {
-        alert("Dispositivo não conectado.");
+    document.getElementById('btnAbsorvencia').addEventListener('click', () => {
+      if (writeChar) {
+        aguardando = 'absorvencia';
+        writeChar.writeValue(new TextEncoder().encode("start"));
       }
-    }
+    });
 
-    document.getElementById('btnAbsorvencia').addEventListener('click', () => requisitarValor('absorvencia'));
-    document.getElementById('btnConcentracao').addEventListener('click', () => requisitarValor('concentracao'));
+    document.getElementById('btnConcentracao').addEventListener('click', () => {
+      if (writeChar) {
+        aguardando = 'concentracao';
+        writeChar.writeValue(new TextEncoder().encode("start"));
+      }
+    });
 
     document.getElementById('btnCalibrar').addEventListener('click', () => {
-      const novoV0 = prompt("Insira o novo valor de referência V₀ (ex: 2.547):");
-      const v0Float = parseFloat(novoV0);
-      if (!isNaN(v0Float) && v0Float > 0 && v0Float <= 3.3) {
-        if (writeCharacteristic) {
-          const comando = `v0=${v0Float.toFixed(3)}`;
-          writeCharacteristic.writeValue(new TextEncoder().encode(comando));
-          alert(`Valor de referência atualizado para ${v0Float.toFixed(3)} V`);
-        } else {
-          alert("Dispositivo não conectado.");
-        }
+      const novoV0 = prompt("Insira novo valor de V₀ (0 a 3.3 V):");
+      const valor = parseFloat(novoV0);
+      if (!isNaN(valor) && valor > 0 && valor <= 3.3) {
+        const comando = `v0=${valor.toFixed(3)}`;
+        writeChar.writeValue(new TextEncoder().encode(comando));
+        alert(`V₀ atualizado para ${valor.toFixed(3)} V`);
       } else {
-        alert("Valor inválido. Deve estar entre 0 e 3.3 V.");
+        alert("Valor inválido. Insira um número entre 0 e 3.3.");
       }
     });
   </script>
