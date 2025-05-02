@@ -3,56 +3,149 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Sensor de Doxorrubicina - Conectar</title>
+  <title>Resultados - Doxorrubicina</title>
   <style>
     body {
       margin: 0;
       padding: 0;
-      background-color: #fbe9e7;
+      background-color: #fde0dc;
       font-family: 'Arial', sans-serif;
       text-align: center;
-      position: relative;
-      overflow-x: hidden;
     }
+
     .logo-container {
       display: flex;
       justify-content: flex-end;
       margin-top: 20px;
       padding-right: 40px;
     }
+
     .logo-container img {
       width: 120px;
       height: auto;
     }
+
     h1 {
       color: #d32f2f;
-      margin-top: 10px;
-      font-size: 2.8em;
+      font-size: 2.5em;
+      margin-top: 30px;
+      margin-bottom: 30px;
       font-weight: bold;
     }
-    #connectBtn {
-      margin-top: 40px;
-      padding: 18px 40px;
+
+    .request-btn {
+      padding: 15px 35px;
       border: none;
       border-radius: 50px;
       color: white;
-      font-size: 1.4em;
+      font-size: 1.2em;
       font-weight: bold;
       cursor: pointer;
       box-shadow: 0px 5px 15px rgba(0, 0, 0, 0.2);
       background-color: #d32f2f;
       transition: background-color 0.3s ease, transform 0.2s;
+      margin: 20px auto;
+      display: block;
     }
-    #connectBtn:hover {
+
+    .request-btn:hover {
       background-color: #b71c1c;
       transform: scale(1.05);
     }
-    .frasco {
-      position: absolute;
-      left: 40px;
-      top: 180px;
-      width: 80px;
-      height: auto;
+
+    .value {
+      padding: 10px 15px;
+      background-color: #f0625d;
+      border-radius: 30px;
+      font-size: 1.2em;
+      color: white;
+      min-width: 100px;
+      text-align: center;
+    }
+
+    .measurement-row {
+      display: flex;
+      justify-content: center;
+      gap: 40px;
+      margin-top: 20px;
+      flex-wrap: wrap;
+    }
+
+    .measurement {
+      font-size: 1.2em;
+      color: #d32f2f;
+      font-weight: bold;
+      display: flex;
+      align-items: center;
+    }
+
+    .medicao-container {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 20px;
+      margin-bottom: 30px;
+    }
+
+    .linha-medicao {
+      display: flex;
+      align-items: center;
+      justify-content: flex-start;
+      gap: 10px;
+      min-height: 50px;
+    }
+
+
+    .value {
+      padding: 10px 15px;
+      background-color: #f0625d;
+      border-radius: 30px;
+      font-size: 1.2em;
+      color: white;
+      min-width: 120px;
+      min-height: 40px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .unidade {
+      font-size: 1em;
+      font-weight: normal;
+      color: #d32f2f;
+    }
+
+    #voltarBtn {
+      position: fixed;
+      bottom: 20px;
+      left: 20px;
+      padding: 12px 30px;
+      background-color: #d32f2f;
+      border: none;
+      border-radius: 30px;
+      color: white;
+      font-size: 1.2em;
+      font-weight: bold;
+      cursor: pointer;
+      box-shadow: 0px 5px 10px rgba(0, 0, 0, 0.2);
+      transition: background-color 0.3s ease, transform 0.2s;
+    }
+
+    #voltarBtn:hover {
+      background-color: #b71c1c;
+      transform: scale(1.05);
+    }
+
+    #progressBar {
+      height: 15px;
+      width: 0%;
+      background-color: #b71c1c;
+      border-radius: 10px;
+      transition: width 1s;
+    }
+
+    .hidden-section {
+      display: none;
     }
   </style>
 </head>
@@ -62,40 +155,136 @@
     <img src="imagens/logos_um_eng.jpeg" alt="Logo UM">
   </div>
 
-  <img src="imagens/frasco.png" alt="Frasco de Doxorrubicina" class="frasco">
-
   <h1>SENSOR DE DOXORRUBICINA</h1>
 
-  <button id="connectBtn">CONECTAR DISPOSITIVO</button>
+  <!-- Pré-conexão -->
+  <div id="preConnect">
+    <button id="connectBtn" class="request-btn">CONECTAR DISPOSITIVO</button>
+    <button id="btnCalibrar" class="request-btn">CALIBRAR REFERÊNCIA</button>
+  </div>
+
+  <!-- Pós-conexão -->
+  <div id="conteudo" class="hidden-section">
+
+    <div class="medicao-container">
+      <div class="linha-medicao">
+        <span class="measurement">ABSORVÊNCIA:</span>
+        <div id="absorvencia" class="value">--</div>
+      </div>
+    
+      <div class="linha-medicao">
+        <span class="measurement">CONCENTRAÇÃO:</span>
+        <div id="concentracao" class="value">--</div>
+        <span class="unidade">mg/mL</span>
+      </div>
+    </div>
+    
+    
+
+    <div style="margin-top: 30px; display: flex; flex-direction: column; align-items: center;">
+      <button id="btnIniciar" class="request-btn" style="width: 250px;">
+        INICIAR
+        <div id="progressContainer" style="display: none; margin-top: 10px; width: 100%;">
+          <div id="progressBar"></div>
+        </div>
+      </button>
+    </div>
+
+    <button id="voltarBtn">VOLTAR</button>
+  </div>
 
   <script>
-    let writeChar = null;
-    let notifyChar = null;
+    let characteristicGlobalWrite;
+    let characteristicGlobalNotify;
 
-    const serviceUUID = '12345678-1234-1234-1234-1234567890ab';
-    const writeUUID = '12345678-1234-1234-1234-1234567890ac';
-    const notifyUUID = '12345678-1234-1234-1234-1234567890ad';
+    function resetValores() {
+      document.getElementById("absorvencia").innerText = "--";
+      document.getElementById("concentracao").innerText = "--";
+    }
+
+    async function enviarComando(cmd) {
+      if (characteristicGlobalWrite) {
+        await characteristicGlobalWrite.writeValue(new TextEncoder().encode(cmd));
+      } else {
+        alert("Dispositivo não conectado.");
+      }
+    }
 
     document.getElementById("connectBtn").addEventListener("click", async () => {
       try {
         const device = await navigator.bluetooth.requestDevice({
           filters: [{ name: 'ESP32_Medidor' }],
-          optionalServices: [serviceUUID]
+          optionalServices: ['12345678-1234-1234-1234-1234567890ab']
         });
 
         const server = await device.gatt.connect();
-        const service = await server.getPrimaryService(serviceUUID);
+        const service = await server.getPrimaryService('12345678-1234-1234-1234-1234567890ab');
 
-        writeChar = await service.getCharacteristic(writeUUID);
-        notifyChar = await service.getCharacteristic(notifyUUID);
+        characteristicGlobalWrite = await service.getCharacteristic('12345678-1234-1234-1234-1234567890ac');
+        characteristicGlobalNotify = await service.getCharacteristic('12345678-1234-1234-1234-1234567890ad');
 
-        alert("Dispositivo conectado com sucesso!");
+        await characteristicGlobalNotify.startNotifications();
+        characteristicGlobalNotify.addEventListener('characteristicvaluechanged', event => {
+          const value = new TextDecoder().decode(event.target.value);
+          console.log("Recebido:", value);
 
-        // Redireciona automaticamente para a página de resultado
-        window.location.href = "resultado.html";
+          if (value.startsWith("A=")) {
+            const a = value.slice(2);
+            document.getElementById("absorvencia").innerText = parseFloat(a).toFixed(5);
+          }
+
+          if (value.startsWith("C=")) {
+            const c = value.slice(2);
+            document.getElementById("concentracao").innerText = parseFloat(c).toFixed(5);
+          }
+        });
+
+        document.getElementById("preConnect").style.display = "none";
+        document.getElementById("conteudo").style.display = "block";
+
       } catch (error) {
+        console.error("Erro ao conectar:", error);
         alert("Erro ao conectar: " + error);
       }
+    });
+
+    document.getElementById("btnIniciar").addEventListener("click", async () => {
+      resetValores();
+
+      const bar = document.getElementById("progressBar");
+      const container = document.getElementById("progressContainer");
+      container.style.display = "block";
+      bar.style.width = "0%";
+
+      await enviarComando("iniciar");
+
+      for (let i = 1; i <= 6; i++) {
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        bar.style.width = `${(i / 6) * 100}%`;
+      }
+
+      await new Promise(resolve => setTimeout(resolve, 500));
+      container.style.display = "none";
+
+      await enviarComando("valorA");
+      await new Promise(r => setTimeout(r, 500));
+      await enviarComando("valorC");
+    });
+
+    document.getElementById("btnCalibrar").addEventListener("click", async () => {
+      const novoV0 = prompt("Insira o novo valor de V0 (ex: 2.547):");
+      if (novoV0 && !isNaN(parseFloat(novoV0))) {
+        await enviarComando(`v0=${novoV0}`);
+        alert(`Valor de referência V0 atualizado para ${novoV0}`);
+      } else {
+        alert("Valor inválido.");
+      }
+    });
+
+    document.getElementById("voltarBtn").addEventListener("click", () => {
+      document.getElementById("conteudo").style.display = "none";
+      document.getElementById("preConnect").style.display = "block";
+      resetValores();
     });
   </script>
 
