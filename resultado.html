@@ -14,32 +14,22 @@
       position: relative;
     }
 
-    .top-icons {
-      position: absolute;
-      top: 20px;
-      right: 20px;
+    .logo-container {
       display: flex;
-      gap: 8px;
+      justify-content: flex-end;
+      margin-top: 20px;
+      padding-right: 40px;
     }
 
-    .icon {
-      width: 40px;
-      height: 40px;
-      background-color: transparent;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    }
-
-    .icon img {
-      width: 100%;
-      height: 100%;
+    .logo-container img {
+      width: 120px;
+      height: auto;
     }
 
     h1 {
       color: #d32f2f;
       font-size: 2.5em;
-      margin-top: 80px;
+      margin-top: 30px;
       margin-bottom: 30px;
       font-weight: bold;
     }
@@ -94,9 +84,8 @@
 </head>
 <body>
 
-  <div class="top-icons">
-    <div class="icon"><img src="imagens/icone1.png" alt="Icone 1"></div>
-    <div class="icon"><img src="imagens/icone2.png" alt="Icone 2"></div>
+  <div class="logo-container">
+    <img src="imagens/logos_um_eng.jpeg" alt="Logo UM">
   </div>
 
   <h1>SENSOR DE DOXORRUBICINA</h1>
@@ -160,12 +149,7 @@
       if (characteristicGlobal) {
         aguardando = tipo;
         console.log(`Pedido de valor para ${tipo} enviado.`);
-        // Se quiser enviar um comando para Arduino diferente dependendo do tipo:
-        // if (tipo === 'absorvencia') {
-        //   characteristicGlobal.writeValue(new TextEncoder().encode('PEDIR_ABSORVENCIA'));
-        // } else if (tipo === 'concentracao') {
-        //   characteristicGlobal.writeValue(new TextEncoder().encode('PEDIR_CONCENTRACAO'));
-        // }
+        // Pode adicionar comandos específicos aqui se necessário
       } else {
         console.error('Dispositivo Bluetooth não conectado.');
       }
