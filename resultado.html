@@ -15,21 +15,20 @@
     }
 
     .logo-container {
-      display: flex;
-      justify-content: flex-end;
-      margin-top: 20px;
-      padding-right: 40px;
+      position: absolute;
+      top: 20px;
+      right: 20px;
     }
 
     .logo-container img {
-      width: 120px;
+      width: 100px;
       height: auto;
     }
 
     h1 {
       color: #d32f2f;
       font-size: 2.5em;
-      margin-top: 30px;
+      margin-top: 80px;
       margin-bottom: 30px;
       font-weight: bold;
     }
@@ -48,6 +47,7 @@
     .value-container {
       display: flex;
       align-items: center;
+      gap: 10px;
     }
 
     .value, .request-btn {
@@ -84,12 +84,19 @@
 </head>
 <body>
 
+  <!-- LOGO -->
   <div class="logo-container">
     <img src="imagens/logos_um_eng.jpeg" alt="Logo UM">
   </div>
 
   <h1>SENSOR DE DOXORRUBICINA</h1>
 
+  <!-- CALIBRAR -->
+  <div style="margin-bottom: 30px;">
+    <button id="btnCalibrar" class="request-btn" style="width: auto; padding: 10px 20px;">CALIBRAR REFERÊNCIA</button>
+  </div>
+
+  <!-- ABSORVÊNCIA -->
   <div class="measurement">
     <span>ABSORVÊNCIA:</span>
     <div class="value-container">
@@ -98,6 +105,7 @@
     </div>
   </div>
 
+  <!-- CONCENTRAÇÃO -->
   <div class="measurement">
     <span>CONCENTRAÇÃO:</span>
     <div class="value-container">
@@ -106,11 +114,12 @@
     </div>
   </div>
 
+  <!-- BOTÃO VOLTAR -->
   <button id="voltarBtn" onclick="window.location.href='index.html'">VOLTAR</button>
 
   <script>
     let characteristicGlobal;
-    let aguardando = ''; // Para saber o que estamos esperando: 'absorvencia' ou 'concentracao'
+    let aguardando = '';
 
     navigator.bluetooth.getDevices().then(devices => {
       if (devices.length > 0) {
@@ -123,20 +132,21 @@
           characteristic.startNotifications().then(() => {
             characteristic.addEventListener('characteristicvaluechanged', event => {
               const value = new TextDecoder().decode(event.target.value);
-              const valores = value.split(','); // Esperamos "0.8,5.2"
+              console.log("Valor recebido:", value);
+              const valores = value.split(',');
 
-              if (aguardando === 'absorvencia' && valores.length >= 1) {
-                document.getElementById("absorvencia").innerText = valores[0];
-                document.getElementById("btnAbsorvencia").style.display = "none";
-                document.getElementById("absorvencia").style.display = "block";
-              } 
-              else if (aguardando === 'concentracao' && valores.length >= 2) {
-                document.getElementById("concentracao").innerText = valores[1];
-                document.getElementById("btnConcentracao").style.display = "none";
-                document.getElementById("concentracao").style.display = "block";
+              if (aguardando === 'absorvencia') {
+                const match = value.match(/A=([\d.]+)/);
+                if (match) {
+                  document.getElementById("absorvencia").innerText = match[1];
+                  document.getElementById("btnAbsorvencia").style.display = "none";
+                  document.getElementById("absorvencia").style.display = "block";
+                }
               }
 
-              aguardando = ''; // Zera depois de receber
+              // Futuro: tratamento de concentração aqui
+
+              aguardando = '';
             });
           });
         }).catch(error => {
@@ -148,8 +158,9 @@
     function requisitarValor(tipo) {
       if (characteristicGlobal) {
         aguardando = tipo;
-        console.log(`Pedido de valor para ${tipo} enviado.`);
-        // Pode adicionar comandos específicos aqui se necessário
+        const comando = 'start';
+        characteristicGlobal.writeValue(new TextEncoder().encode(comando));
+        console.log(`Comando '${comando}' enviado para ${tipo}.`);
       } else {
         console.error('Dispositivo Bluetooth não conectado.');
       }
@@ -157,6 +168,22 @@
 
     document.getElementById('btnAbsorvencia').addEventListener('click', () => requisitarValor('absorvencia'));
     document.getElementById('btnConcentracao').addEventListener('click', () => requisitarValor('concentracao'));
+
+    document.getElementById('btnCalibrar').addEventListener('click', () => {
+      const novoV0 = prompt("Insira o novo valor de referência V₀ (ex: 2.547):");
+      const v0Float = parseFloat(novoV0);
+      if (!isNaN(v0Float) && v0Float > 0 && v0Float <= 3.3) {
+        if (characteristicGlobal) {
+          const comando = `v0=${v0Float.toFixed(3)}`;
+          characteristicGlobal.writeValue(new TextEncoder().encode(comando));
+          alert(`Valor de referência atualizado para ${v0Float.toFixed(3)} V`);
+        } else {
+          alert("Dispositivo Bluetooth não conectado.");
+        }
+      } else {
+        alert("Valor inválido. Deve ser um número entre 0 e 3.3");
+      }
+    });
   </script>
 
 </body>
