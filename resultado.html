@@ -30,7 +30,7 @@
       color: #d32f2f;
       font-size: 2.5em;
       margin-top: 30px;
-      margin-bottom: 20px;
+      margin-bottom: 30px;
       font-weight: bold;
     }
 
@@ -62,25 +62,6 @@
       cursor: pointer;
     }
 
-    #btnCalibrar {
-      margin: 20px auto;
-      padding: 12px 30px;
-      background-color: #f0625d;
-      border: none;
-      border-radius: 30px;
-      color: white;
-      font-size: 1.2em;
-      font-weight: bold;
-      cursor: pointer;
-      box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.2);
-      transition: background-color 0.3s ease, transform 0.2s;
-    }
-
-    #btnCalibrar:hover {
-      background-color: #d84340;
-      transform: scale(1.03);
-    }
-
     #voltarBtn {
       margin-top: 30px;
       padding: 12px 30px;
@@ -109,8 +90,6 @@
 
   <h1>SENSOR DE DOXORRUBICINA</h1>
 
-  <button id="btnCalibrar">Calibrar Referência (V₀)</button>
-
   <div class="measurement">
     <span>ABSORVÊNCIA:</span>
     <div class="value-container">
@@ -127,79 +106,85 @@
     </div>
   </div>
 
+  <div class="measurement">
+    <button id="btnCalibrar" class="request-btn">CALIBRAR REFERÊNCIA</button>
+  </div>
+
   <button id="voltarBtn" onclick="window.location.href='index.html'">VOLTAR</button>
 
   <script>
-    let writeChar = null;
-    let notifyChar = null;
+    let characteristicGlobalWrite;
+    let characteristicGlobalNotify;
     let aguardando = '';
 
-    // Reutiliza conexão Bluetooth já emparelhada
-    navigator.bluetooth.getDevices().then(devices => {
-      if (devices.length > 0) {
-        devices[0].gatt.connect().then(server => {
-          return server.getPrimaryService('12345678-1234-1234-1234-1234567890ab');
-        }).then(async service => {
-          writeChar = await service.getCharacteristic('12345678-1234-1234-1234-1234567890ac');
-          notifyChar = await service.getCharacteristic('12345678-1234-1234-1234-1234567890ad');
-
-          await notifyChar.startNotifications();
-          notifyChar.addEventListener('characteristicvaluechanged', event => {
-            const value = new TextDecoder().decode(event.target.value);
-            console.log("Valor recebido:", value);
-
-            if (aguardando === 'absorvencia') {
-              const match = value.match(/A=([\d.]+)/);
-              if (match) {
-                document.getElementById("absorvencia").innerText = match[1];
-                document.getElementById("btnAbsorvencia").style.display = "none";
-                document.getElementById("absorvencia").style.display = "block";
-              }
-            }
-
-            // Exemplo futuro para concentração, se o ESP32 enviar "C=..."
-            if (aguardando === 'concentracao') {
-              const match = value.match(/C=([\d.]+)/);
-              if (match) {
-                document.getElementById("concentracao").innerText = match[1];
-                document.getElementById("btnConcentracao").style.display = "none";
-                document.getElementById("concentracao").style.display = "block";
-              }
-            }
-
-            aguardando = '';
-          });
-        }).catch(error => {
-          console.error("Erro de conexão:", error);
+    async function conectarDispositivo() {
+      try {
+        const device = await navigator.bluetooth.requestDevice({
+          filters: [{ name: 'ESP32_Medidor' }],
+          optionalServices: ['12345678-1234-1234-1234-1234567890ab']
         });
-      }
-    });
 
-    document.getElementById('btnAbsorvencia').addEventListener('click', () => {
-      if (writeChar) {
-        aguardando = 'absorvencia';
-        writeChar.writeValue(new TextEncoder().encode("start"));
-      }
-    });
+        const server = await device.gatt.connect();
+        const service = await server.getPrimaryService('12345678-1234-1234-1234-1234567890ab');
 
-    document.getElementById('btnConcentracao').addEventListener('click', () => {
-      if (writeChar) {
-        aguardando = 'concentracao';
-        writeChar.writeValue(new TextEncoder().encode("start"));
-      }
-    });
+        characteristicGlobalWrite = await service.getCharacteristic('12345678-1234-1234-1234-1234567890ac');
+        characteristicGlobalNotify = await service.getCharacteristic('12345678-1234-1234-1234-1234567890ad');
 
-    document.getElementById('btnCalibrar').addEventListener('click', () => {
-      const novoV0 = prompt("Insira novo valor de V₀ (0 a 3.3 V):");
-      const valor = parseFloat(novoV0);
-      if (!isNaN(valor) && valor > 0 && valor <= 3.3) {
-        const comando = `v0=${valor.toFixed(3)}`;
-        writeChar.writeValue(new TextEncoder().encode(comando));
-        alert(`V₀ atualizado para ${valor.toFixed(3)} V`);
+        await characteristicGlobalNotify.startNotifications();
+        characteristicGlobalNotify.addEventListener('characteristicvaluechanged', event => {
+          const value = new TextDecoder().decode(event.target.value);
+          console.log("Recebido:", value);
+
+          const match = value.match(/A=([\d.]+)/);
+          if (match && aguardando === 'absorvencia') {
+            document.getElementById("absorvencia").innerText = match[1];
+            document.getElementById("btnAbsorvencia").style.display = "none";
+            document.getElementById("absorvencia").style.display = "block";
+            aguardando = '';
+          }
+
+          // Para futuro: se quiser incluir concentração como função da absorvência
+          if (match && aguardando === 'concentracao') {
+            const absorv = parseFloat(match[1]);
+            const concentracao = (absorv * 10).toFixed(2); // ajuste conforme fórmula real
+            document.getElementById("concentracao").innerText = concentracao;
+            document.getElementById("btnConcentracao").style.display = "none";
+            document.getElementById("concentracao").style.display = "block";
+            aguardando = '';
+          }
+        });
+
+        console.log("Dispositivo conectado.");
+      } catch (error) {
+        console.error("Erro ao conectar:", error);
+      }
+    }
+
+    async function requisitarValor(tipo) {
+      if (characteristicGlobalWrite) {
+        aguardando = tipo;
+        await characteristicGlobalWrite.writeValue(new TextEncoder().encode("start"));
       } else {
-        alert("Valor inválido. Insira um número entre 0 e 3.3.");
+        console.error("Dispositivo não conectado.");
       }
-    });
+    }
+
+    async function calibrarReferencia() {
+      const novoV0 = prompt("Insira o novo valor de V0 (ex: 2.547):");
+      if (novoV0 && !isNaN(parseFloat(novoV0))) {
+        const comando = `v0=${novoV0}`;
+        await characteristicGlobalWrite.writeValue(new TextEncoder().encode(comando));
+        alert(`Valor de referência V0 atualizado para ${novoV0}`);
+      } else {
+        alert("Valor inválido.");
+      }
+    }
+
+    window.addEventListener('load', conectarDispositivo);
+
+    document.getElementById('btnAbsorvencia').addEventListener('click', () => requisitarValor('absorvencia'));
+    document.getElementById('btnConcentracao').addEventListener('click', () => requisitarValor('concentracao'));
+    document.getElementById('btnCalibrar').addEventListener('click', calibrarReferencia);
   </script>
 
 </body>
