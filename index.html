@@ -1,33 +1,34 @@
 <!DOCTYPE html>
 <html lang="pt">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Sensor de Doxorrubicina</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Resultados - Doxorrubicina</title>
   <style>
     body {
       margin: 0;
       padding: 0;
       background-color: #fde0dc;
-      font-family: Arial, sans-serif;
+      font-family: 'Arial', sans-serif;
       text-align: center;
     }
 
     .logo-container {
       display: flex;
       justify-content: flex-end;
-      padding: 20px 40px 0 0;
+      margin-top: 20px;
+      padding-right: 40px;
     }
 
     .logo-container img {
       width: 120px;
-      height: auto;
     }
 
     h1 {
       color: #d32f2f;
       font-size: 2.5em;
-      margin: 20px 0;
+      margin-top: 30px;
+      margin-bottom: 30px;
       font-weight: bold;
     }
 
@@ -42,13 +43,17 @@
       box-shadow: 0px 5px 15px rgba(0, 0, 0, 0.2);
       background-color: #d32f2f;
       transition: background-color 0.3s ease, transform 0.2s;
-      margin: 10px auto;
+      margin: 20px auto;
       display: block;
     }
 
     .request-btn:hover {
       background-color: #b71c1c;
       transform: scale(1.05);
+    }
+
+    .hidden {
+      display: none;
     }
 
     .value {
@@ -83,11 +88,14 @@
     .linha-medicao {
       display: flex;
       align-items: center;
+      justify-content: flex-start;
       gap: 10px;
+      min-height: 50px;
     }
 
     .unidade {
       font-size: 1em;
+      font-weight: normal;
       color: #d32f2f;
     }
 
@@ -120,9 +128,6 @@
       transition: width 1s;
     }
 
-    .hidden {
-      display: none;
-    }
   </style>
 </head>
 <body>
@@ -133,22 +138,20 @@
 
   <h1>SENSOR DE DOXORRUBICINA</h1>
 
-  <!-- Botão inicial -->
   <button id="connectBtn" class="request-btn">CONECTAR DISPOSITIVO</button>
 
-  <!-- Após conexão -->
   <div id="controlePrincipal" class="hidden">
     <button id="realizarMedicaoBtn" class="request-btn">REALIZAR MEDIÇÃO</button>
     <button id="btnCalibrar" class="request-btn">CALIBRAR REFERÊNCIA</button>
   </div>
 
-  <!-- Dados de medição -->
   <div id="dadosMedicao" class="hidden">
     <div class="medicao-container">
       <div class="linha-medicao">
         <span class="measurement">ABSORVÊNCIA:</span>
         <div id="absorvencia" class="value">--</div>
       </div>
+
       <div class="linha-medicao">
         <span class="measurement">CONCENTRAÇÃO:</span>
         <div id="concentracao" class="value">--</div>
@@ -156,7 +159,7 @@
       </div>
     </div>
 
-    <div style="margin-top: 30px;">
+    <div style="margin-top: 30px; display: flex; flex-direction: column; align-items: center;">
       <button id="btnIniciar" class="request-btn" style="width: 250px;">
         INICIAR
         <div id="progressContainer" style="display: none; margin-top: 10px; width: 100%;">
@@ -206,6 +209,7 @@
           if (value.startsWith("A=")) {
             document.getElementById("absorvencia").innerText = parseFloat(value.slice(2)).toFixed(5);
           }
+
           if (value.startsWith("C=")) {
             document.getElementById("concentracao").innerText = parseFloat(value.slice(2)).toFixed(5);
           }
@@ -223,6 +227,17 @@
 
     document.getElementById("realizarMedicaoBtn").addEventListener("click", () => {
       document.getElementById("dadosMedicao").classList.remove("hidden");
+      document.getElementById("controlePrincipal").classList.add("hidden");
+    });
+
+    document.getElementById("btnCalibrar").addEventListener("click", async () => {
+      const novoV0 = prompt("Insira o novo valor de V0 (ex: 2.547):");
+      if (novoV0 && !isNaN(parseFloat(novoV0))) {
+        await enviarComando(`v0=${novoV0}`);
+        alert(`Valor de referência V0 atualizado para ${novoV0}`);
+      } else {
+        alert("Valor inválido.");
+      }
     });
 
     document.getElementById("btnIniciar").addEventListener("click", async () => {
@@ -240,7 +255,6 @@
         bar.style.width = `${(i / 6) * 100}%`;
       }
 
-      await new Promise(resolve => setTimeout(resolve, 500));
       container.style.display = "none";
 
       await enviarComando("valorA");
@@ -248,31 +262,9 @@
       await enviarComando("valorC");
     });
 
-    document.getElementById("btnCalibrar").addEventListener("click", async () => {
-      const confirmar = confirm("Deseja calibrar automaticamente a referência agora?");
-      if (confirmar) {
-        const bar = document.getElementById("progressBar");
-        const container = document.getElementById("progressContainer");
-        container.style.display = "block";
-        bar.style.width = "0%";
-
-        await enviarComando("calibrar");
-
-        for (let i = 1; i <= 6; i++) {
-          await new Promise(resolve => setTimeout(resolve, 1000));
-          bar.style.width = `${(i / 6) * 100}%`;
-        }
-
-        container.style.display = "none";
-        alert("Calibração concluída.");
-      }
-    });
-
     document.getElementById("voltarBtn").addEventListener("click", () => {
-      document.getElementById("controlePrincipal").classList.add("hidden");
+      document.getElementById("controlePrincipal").classList.remove("hidden");
       document.getElementById("dadosMedicao").classList.add("hidden");
-      document.getElementById("connectBtn").classList.remove("hidden");
-      document.getElementById("voltarBtn").classList.add("hidden");
       resetValores();
     });
   </script>
