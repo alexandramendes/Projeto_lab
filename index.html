@@ -59,16 +59,11 @@
       border-radius: 30px;
       font-size: 1.2em;
       color: white;
-      min-width: 100px;
-      text-align: center;
-    }
-
-    .measurement-row {
+      min-width: 120px;
+      min-height: 40px;
       display: flex;
+      align-items: center;
       justify-content: center;
-      gap: 40px;
-      margin-top: 20px;
-      flex-wrap: wrap;
     }
 
     .measurement {
@@ -93,20 +88,6 @@
       justify-content: flex-start;
       gap: 10px;
       min-height: 50px;
-    }
-
-
-    .value {
-      padding: 10px 15px;
-      background-color: #f0625d;
-      border-radius: 30px;
-      font-size: 1.2em;
-      color: white;
-      min-width: 120px;
-      min-height: 40px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
     }
 
     .unidade {
@@ -179,8 +160,6 @@
       </div>
     </div>
     
-    
-
     <div style="margin-top: 30px; display: flex; flex-direction: column; align-items: center;">
       <button id="btnIniciar" class="request-btn" style="width: 250px;">
         INICIAR
@@ -272,12 +251,22 @@
     });
 
     document.getElementById("btnCalibrar").addEventListener("click", async () => {
-      const novoV0 = prompt("Insira o novo valor de V0 (ex: 2.547):");
-      if (novoV0 && !isNaN(parseFloat(novoV0))) {
-        await enviarComando(`v0=${novoV0}`);
-        alert(`Valor de referência V0 atualizado para ${novoV0}`);
-      } else {
-        alert("Valor inválido.");
+      const confirmar = confirm("Deseja calibrar automaticamente a referência agora?");
+      if (confirmar) {
+        const bar = document.getElementById("progressBar");
+        const container = document.getElementById("progressContainer");
+        container.style.display = "block";
+        bar.style.width = "0%";
+
+        await enviarComando("calibrar");
+
+        for (let i = 1; i <= 6; i++) {
+          await new Promise(resolve => setTimeout(resolve, 1000));
+          bar.style.width = `${(i / 6) * 100}%`;
+        }
+
+        container.style.display = "none";
+        alert("Calibração concluída.");
       }
     });
 
