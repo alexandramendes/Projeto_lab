@@ -1,8 +1,8 @@
 <!DOCTYPE html>
 <html lang="pt">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Resultados - Doxorrubicina</title>
   <style>
     body {
@@ -128,12 +128,66 @@
     .hidden {
       display: none;
     }
+
+    /* Responsivo para telemóveis */
+    @media (max-width: 600px) {
+      h1 {
+        font-size: 1.8em;
+        margin: 20px 10px;
+      }
+
+      .logo-container {
+        justify-content: center;
+        padding-right: 0;
+      }
+
+      .logo-container img {
+        width: 90px;
+      }
+
+      .request-btn {
+        padding: 12px 25px;
+        font-size: 1em;
+        width: 90%;
+        margin: 10px auto;
+      }
+
+      .value, .measurement {
+        font-size: 1em;
+      }
+
+      .linha-medicao {
+        flex-direction: column;
+        align-items: center;
+        gap: 5px;
+      }
+
+      .medicao-container {
+        width: 100%;
+        gap: 15px;
+        padding: 0 10px;
+      }
+
+      #btnIniciar {
+        width: 90%;
+      }
+
+      #voltarBtn {
+        left: 10px;
+        font-size: 1em;
+        padding: 10px 20px;
+      }
+
+      .unidade {
+        font-size: 0.9em;
+      }
+    }
   </style>
 </head>
 <body>
 
   <div class="logo-container">
-    <img src="imagens/logos_um_eng.jpeg" alt="Logo UM">
+    <img src="imagens/logos_um_eng.jpeg" alt="Logo UM" />
   </div>
 
   <h1>SENSOR DE DOXORRUBICINA</h1>
