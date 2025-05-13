@@ -1,8 +1,8 @@
 <!DOCTYPE html>
 <html lang="pt">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Resultados - Doxorrubicina</title>
   <style>
     body {
@@ -22,6 +22,7 @@
 
     .logo-container img {
       width: 120px;
+      height: auto;
     }
 
     h1 {
@@ -52,10 +53,6 @@
       transform: scale(1.05);
     }
 
-    .hidden {
-      display: none;
-    }
-
     .value {
       padding: 10px 15px;
       background-color: #f0625d;
@@ -77,20 +74,20 @@
       align-items: center;
     }
 
-    .medicao-container {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 20px;
-      margin-bottom: 30px;
-    }
-
     .linha-medicao {
       display: flex;
       align-items: center;
       justify-content: flex-start;
       gap: 10px;
       min-height: 50px;
+    }
+
+    .medicao-container {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 20px;
+      margin-bottom: 30px;
     }
 
     .unidade {
@@ -128,6 +125,9 @@
       transition: width 1s;
     }
 
+    .hidden {
+      display: none;
+    }
   </style>
 </head>
 <body>
@@ -138,20 +138,24 @@
 
   <h1>SENSOR DE DOXORRUBICINA</h1>
 
-  <button id="connectBtn" class="request-btn">CONECTAR DISPOSITIVO</button>
+  <!-- Conexão -->
+  <div id="conectarSecao">
+    <button id="connectBtn" class="request-btn">CONECTAR DISPOSITIVO</button>
+  </div>
 
+  <!-- Controles principais -->
   <div id="controlePrincipal" class="hidden">
     <button id="realizarMedicaoBtn" class="request-btn">REALIZAR MEDIÇÃO</button>
     <button id="btnCalibrar" class="request-btn">CALIBRAR REFERÊNCIA</button>
   </div>
 
+  <!-- Dados de medição -->
   <div id="dadosMedicao" class="hidden">
     <div class="medicao-container">
       <div class="linha-medicao">
         <span class="measurement">ABSORVÊNCIA:</span>
         <div id="absorvencia" class="value">--</div>
       </div>
-
       <div class="linha-medicao">
         <span class="measurement">CONCENTRAÇÃO:</span>
         <div id="concentracao" class="value">--</div>
@@ -207,17 +211,18 @@
           console.log("Recebido:", value);
 
           if (value.startsWith("A=")) {
-            document.getElementById("absorvencia").innerText = parseFloat(value.slice(2)).toFixed(5);
+            const a = value.slice(2);
+            document.getElementById("absorvencia").innerText = parseFloat(a).toFixed(5);
           }
 
           if (value.startsWith("C=")) {
-            document.getElementById("concentracao").innerText = parseFloat(value.slice(2)).toFixed(5);
+            const c = value.slice(2);
+            document.getElementById("concentracao").innerText = parseFloat(c).toFixed(5);
           }
         });
 
-        document.getElementById("connectBtn").classList.add("hidden");
+        document.getElementById("conectarSecao").classList.add("hidden");
         document.getElementById("controlePrincipal").classList.remove("hidden");
-        document.getElementById("voltarBtn").classList.remove("hidden");
 
       } catch (error) {
         console.error("Erro ao conectar:", error);
@@ -226,18 +231,9 @@
     });
 
     document.getElementById("realizarMedicaoBtn").addEventListener("click", () => {
-      document.getElementById("dadosMedicao").classList.remove("hidden");
       document.getElementById("controlePrincipal").classList.add("hidden");
-    });
-
-    document.getElementById("btnCalibrar").addEventListener("click", async () => {
-      const novoV0 = prompt("Insira o novo valor de V0 (ex: 2.547):");
-      if (novoV0 && !isNaN(parseFloat(novoV0))) {
-        await enviarComando(`v0=${novoV0}`);
-        alert(`Valor de referência V0 atualizado para ${novoV0}`);
-      } else {
-        alert("Valor inválido.");
-      }
+      document.getElementById("dadosMedicao").classList.remove("hidden");
+      document.getElementById("voltarBtn").classList.remove("hidden");
     });
 
     document.getElementById("btnIniciar").addEventListener("click", async () => {
@@ -255,6 +251,7 @@
         bar.style.width = `${(i / 6) * 100}%`;
       }
 
+      await new Promise(resolve => setTimeout(resolve, 500));
       container.style.display = "none";
 
       await enviarComando("valorA");
@@ -262,9 +259,20 @@
       await enviarComando("valorC");
     });
 
+    document.getElementById("btnCalibrar").addEventListener("click", async () => {
+      const novoV0 = prompt("Insira o novo valor de V0 (ex: 2.547):");
+      if (novoV0 && !isNaN(parseFloat(novoV0))) {
+        await enviarComando(`v0=${novoV0}`);
+        alert(`Valor de referência V0 atualizado para ${novoV0}`);
+      } else {
+        alert("Valor inválido.");
+      }
+    });
+
     document.getElementById("voltarBtn").addEventListener("click", () => {
-      document.getElementById("controlePrincipal").classList.remove("hidden");
       document.getElementById("dadosMedicao").classList.add("hidden");
+      document.getElementById("controlePrincipal").classList.remove("hidden");
+      document.getElementById("voltarBtn").classList.add("hidden");
       resetValores();
     });
   </script>
