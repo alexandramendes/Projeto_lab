@@ -211,12 +211,12 @@
   <script>
     let characteristicGlobalWrite;
     let characteristicGlobalNotify;
-
+  
     function resetValores() {
       document.getElementById("absorvencia").innerText = "--";
       document.getElementById("concentracao").innerText = "--";
     }
-
+  
     async function enviarComando(cmd) {
       if (characteristicGlobalWrite) {
         await characteristicGlobalWrite.writeValue(new TextEncoder().encode(cmd));
@@ -224,91 +224,102 @@
         alert("Dispositivo não conectado.");
       }
     }
-
+  
+    async function animarBarraProgresso(duracaoSegundos = 6) {
+      const bar = document.getElementById("progressBar");
+      const container = document.getElementById("progressContainer");
+      container.style.display = "block";
+      bar.style.width = "0%";
+  
+      const passos = duracaoSegundos;
+      for (let i = 1; i <= passos; i++) {
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        bar.style.width = `${(i / passos) * 100}%`;
+      }
+  
+      await new Promise(resolve => setTimeout(resolve, 500));
+      container.style.display = "none";
+    }
+  
     document.getElementById("connectBtn").addEventListener("click", async () => {
       try {
         const device = await navigator.bluetooth.requestDevice({
           filters: [{ name: 'ESP32_Medidor' }],
           optionalServices: ['12345678-1234-1234-1234-1234567890ab']
         });
-
+  
         const server = await device.gatt.connect();
         const service = await server.getPrimaryService('12345678-1234-1234-1234-1234567890ab');
-
+  
         characteristicGlobalWrite = await service.getCharacteristic('12345678-1234-1234-1234-1234567890ac');
         characteristicGlobalNotify = await service.getCharacteristic('12345678-1234-1234-1234-1234567890ad');
-
+  
         await characteristicGlobalNotify.startNotifications();
         characteristicGlobalNotify.addEventListener('characteristicvaluechanged', event => {
           const value = new TextDecoder().decode(event.target.value);
           console.log("Recebido:", value);
-
+  
           if (value.startsWith("A=")) {
             const a = value.slice(2);
             document.getElementById("absorvencia").innerText = parseFloat(a).toFixed(5);
           }
-
+  
           if (value.startsWith("C=")) {
             const c = value.slice(2);
             document.getElementById("concentracao").innerText = parseFloat(c).toFixed(5);
           }
         });
-
+  
         document.getElementById("conectarSecao").classList.add("hidden");
         document.getElementById("controlePrincipal").classList.remove("hidden");
-
+  
       } catch (error) {
         console.error("Erro ao conectar:", error);
         alert("Erro ao conectar: " + error);
       }
     });
-
+  
     document.getElementById("realizarMedicaoBtn").addEventListener("click", () => {
       document.getElementById("controlePrincipal").classList.add("hidden");
       document.getElementById("dadosMedicao").classList.remove("hidden");
       document.getElementById("voltarBtn").classList.remove("hidden");
     });
-
+  
     document.getElementById("btnIniciar").addEventListener("click", async () => {
       resetValores();
-
-      const bar = document.getElementById("progressBar");
-      const container = document.getElementById("progressContainer");
-      container.style.display = "block";
-      bar.style.width = "0%";
-
+  
+      await animarBarraProgresso(6);
+  
       await enviarComando("iniciar");
-
-      for (let i = 1; i <= 6; i++) {
-        await new Promise(resolve => setTimeout(resolve, 1000));
-        bar.style.width = `${(i / 6) * 100}%`;
-      }
-
-      await new Promise(resolve => setTimeout(resolve, 500));
-      container.style.display = "none";
-
+  
+      // Depois que a medição terminar, pedir os valores
       await enviarComando("valorA");
       await new Promise(r => setTimeout(r, 500));
       await enviarComando("valorC");
     });
-
+  
     document.getElementById("btnCalibrar").addEventListener("click", async () => {
-      const novoV0 = prompt("Insira o novo valor de V0 (ex: 2.547):");
-      if (novoV0 && !isNaN(parseFloat(novoV0))) {
-        await enviarComando(`v0=${novoV0}`);
-        alert(`Valor de referência V0 atualizado para ${novoV0}`);
-      } else {
-        alert("Valor inválido.");
-      }
+      const confirmacao = confirm("Deseja calibrar automaticamente a referência com base na medição atual?");
+      if (!confirmacao) return;
+  
+      resetValores();
+  
+      // Mostrar barra de progresso durante calibração (6s, igual à medição)
+      await animarBarraProgresso(6);
+  
+      await enviarComando("calibrar");
+  
+      alert("Calibração iniciada. A nova referência será usada nas próximas medições.");
     });
-
+  
     document.getElementById("voltarBtn").addEventListener("click", () => {
       document.getElementById("dadosMedicao").classList.add("hidden");
       document.getElementById("controlePrincipal").classList.remove("hidden");
       document.getElementById("voltarBtn").classList.add("hidden");
       resetValores();
     });
-  </script>
+</script>
+
 
 </body>
 </html>
