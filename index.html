@@ -311,13 +311,13 @@
     });
 
     document.getElementById("btnCalibrar").addEventListener("click", async () => {
-      const confirmacao = confirm("Deseja calibrar automaticamente a referência com base na medição atual?");
+      const confirmacao = confirm("Deseja calibrar a referência?");
       if (!confirmacao) return;
 
       resetValores();
       await animarBarraProgresso(6, "progressContainerCalibrar", "progressBarCalibrar");
       await enviarComando("calibrar");
-      alert("Calibração iniciada. A nova referência será usada nas próximas medições.");
+      alert("Calibração realizada com sucesso!");
     });
 
     document.getElementById("voltarBtn").addEventListener("click", () => {
